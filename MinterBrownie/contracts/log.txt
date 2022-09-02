@@ -1,0 +1,45 @@
+ 2512  npm install @openzeppelin/contracts
+ 3218  npm install @openzeppelin/contracts
+ 3333  npm install @openzeppelin/contracts
+ 3806  npm install @openzeppelin/contracts
+ 3807  npm install @openzeppelin/contracts --save
+ 3929  npm i @openzeppelin/contracts
+ 3932  ls node_modules/@openzeppelin
+ 3936  cd node_modules/@openzeppelin/contracts
+ 4015  npm i @openzeppelin/contracts
+ 4890  npm install --save @openzeppelin/contracts
+ 4892  cd node_modules/@openzeppelin/contracts/token/ERC20/
+ 4961  cd Desktop/myProjects/Aviato-Swap/AviatoContract/node_modules/@openzeppelin/contracts/token/ERC20/
+ 4976  cd node_modules/@openzeppelin/contracts
+ 5226  vim node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol
+ 5228  vim node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol
+ 5246  npm i --save @openzeppelin/contracts-upgradeable
+ 5387  npm i --save @openzeppelin/contracts-upgradeable
+ 5825  npm install --save @openzeppelin/contracts
+ 5826  npm i --save @openzeppelin/contracts
+ 5827  sudo npm i --save @openzeppelin/contracts
+ 5839  npm i --save @openzeppelin/contracts
+ 6086  npm i --save @openzeppelin/contracts
+ 6255  npm install --save @openzeppelin/contracts
+ 6416  brownie pm install Openzeppelin/openzeppelin-contracts
+ 6417  brownie pm install OpenZeppelin/openzeppelin-contracts@3.0.0
+ 6418  brownie pm install OpenZeppelin/openzeppelin-contracts@3.4.0
+ 6477  brownie pm install OpenZeppelin/openzeppelin-contracts@3.0.0
+ 6544  cd OpenZeppelin
+ 6546  cd openzeppelin-contracts@4.3.2
+ 6697  npm i --save @openzeppelin/contracts
+ 6701  sudo npm i --save @openzeppelin/contracts
+ 6792  npm install @openzeppelin/contracts
+ 7067  npm install @openzeppelin/contracts@4.7.3
+ 7069  sudo npm install @openzeppelin/contracts@4.7.3
+ 7120  npm install @openzeppelin/contracts
+ 7122  sudo npm install @openzeppelin/contracts
+ 7141  npm i @openzeppelin/contracts@4.7.3
+ 7150  npm uninstall @openzeppelin/contracts
+ 7153  sudo npm uninstall @openzeppelin/contracts
+ 7155  sudo npm uninstall -g @openzeppelin/contracts
+ 7175  npm i @openzeppelin/contracts --save
+ 7177  sudo npm i @openzeppelin/contracts --save
+ 7180  npm install @openzeppelin/contracts
+ 7181  sudo npm install @openzeppelin/contracts
+ 7186  history | less | grep -i openzeppelin

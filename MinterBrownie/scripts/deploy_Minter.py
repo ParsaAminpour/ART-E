@@ -1,10 +1,14 @@
+from ast import expr_context
+from importlib.metadata import metadata
+from telnetlib import STATUS
+from complement_scripts import get_metadata_form, adding_to_ipfs_and_get_tokenURI, adding_to_pinata
 from brownie import Minter, accounts, config, network
 from rich import print, pretty, print_json
 from rich.console import Console
-import sys, requests, logging, argparse
+import sys, requests, logging, argparse,json
+from asgiref.sync import sync_to_async
 import playsound
 console = Console()
-
 
 def main():
     logging.basicConfig(filename="debug.log", level=logging.DEBUG)  
@@ -15,14 +19,34 @@ def main():
     except Exception as err:
         logging.warning("The main account couldn't implement")
     
-    contract_deployed = Minter.deploy({'from' : developer_account})
-    for account in accounts:
-        console.log(f"{account.address} : {network.show_active()}")
+    print(network.show_active())
+    contract_deployed = Minter.deploy("DALL-E", "dalle", {'from' : developer_account})
+    logging.info(contract_deployed)
 
+    token_id = contract_deployed.get_token_id()  
+    with console.status("It's uploading..."):
+        try:
+            path = "./duck.jpg"
 
-# adding to IPFS and get TokenURI
-# adding to Pianda and retrive it
-# create base of Metadata
-# config metadata with sample image
-# generate opensea url for accessing to the collection url on opensea (rinkeby Testnetwork)
-    
+            sys.stdout.write("\r")
+            sys.stdout.write("adding to IPFS...")
+            sys.stdout.write("\r")            
+            adding_to_ipfs = adding_to_ipfs_and_get_tokenURI(token_id, path)
+            sys.stdout.flush()
+
+            metadata_schema_fetched = sync_to_async(get_metadata_form)()
+
+            sys.stdout.write("\r")
+            sys.stdout.write("adding to Pinata...")
+            sys.stdout.write("\r")
+            add_to_pinata_and_get_response = adding_to_pinata(
+                json.loads(adding_to_ipfs).get('cid'),
+                json.loads(metadata_schema_fetched)
+            )
+            sys.stdout.flush()
+
+            print_json(add_to_pinata_and_get_response)
+            
+        except Exception as err:
+            logging.debug(err)
+            console.log(err)

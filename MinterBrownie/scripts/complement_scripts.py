@@ -37,7 +37,7 @@ def get_metadata_form(
 
 
 @async_to_sync
-async def adding_to_ipfs(token_id:int, image_path:str) -> str:
+async def adding_to_ipfs_and_get_tokenURI(token_id:int, image_path:str) -> str:
     try:
         ipfs = await ipfsApi.Client("127.0.0.1",port=5001)
     except Exception as err:
@@ -56,13 +56,13 @@ async def adding_to_ipfs(token_id:int, image_path:str) -> str:
 
     ipfs_hash = ipfs_add[0].get("Hash")
     token_uri = f"https://ipfs.io/ipfs/{ipfs_hash}?filename={file_name}"
-    return token_uri
+    return json.dumps({'cid' : ipfs_hash, 'token_uri' : token_uri})
 
 
 @async_to_sync
 async def adding_to_pinata(CID, metadata:str):
-    if len(CID) != 46: return False
-    if CID[:3] != "Qmb": return "invalid CID"
+    if CID[:2] != "Qm" or len(CID) != 46: 
+        raise ValueError("invalid CID")
 
     load_dotenv(find_dotenv())
     PINATA_API_KEY = os.environ.get("PINATA_API_KEY")
@@ -78,7 +78,8 @@ async def adding_to_pinata(CID, metadata:str):
             "name": metadata_schema.get("title"),
             "keyvalues": {
                 "description": metadata_schema.get("description"),
-                "image": metadata_schema.get("image")
+                "image": metadata_schema.get("image"),
+                'attributes' : metadata_schema.get("attributes")
             }
         }       
   })
@@ -99,7 +100,7 @@ async def adding_to_pinata(CID, metadata:str):
         return False
     
     logging.info(f"IPFS CID {CID} uploaded on Pinata successfully")
-    return True
+    return response.json()
 
 
 

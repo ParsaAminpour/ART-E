@@ -41,6 +41,7 @@ class ArtMutation(graphene.Mutation):
         that_art.save()
         return ArtMutation(art_field=that_art)
 
+
 class bridge_mutation(graphene.ObjectType):
     adding_art = ArtMutation.Field()
 

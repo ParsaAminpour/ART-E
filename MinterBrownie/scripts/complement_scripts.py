@@ -1,3 +1,6 @@
+from ast import expr_context
+from doctest import master
+import hashlib
 from brownie import Minter, accounts, network, config, interface
 from requests.exceptions import ConnectionError, Timeout
 from rich import print, pretty, print_json
@@ -5,13 +8,15 @@ from rich.console import Console
 from pathlib import Path
 import sys, requests, json, logging, os, io
 import ipfsApi 
+from cryptography.fernet import Fernet, MultiFernet
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from textblob import TextBlob 
 from dotenv import load_dotenv, find_dotenv
+from datetime import datetime as td
 from asgiref.sync import async_to_sync, sync_to_async
 console = Console()
 
-def estimating_valud(*args, **kwargs):
-    pass
 
 @async_to_sync
 async def adding_to_ipfs_and_get_tokenURI(token_id:int, image_path:str) -> str:
@@ -29,11 +34,21 @@ async def adding_to_ipfs_and_get_tokenURI(token_id:int, image_path:str) -> str:
     file_name = image_path.split("/")[-1]
 
     with Path(image_path).open("rb") as file:
+        console.log(io.BytesIO(b'init binary data \x00\x01'))
         ipfs_add = ipfs.add(file.read())
 
     ipfs_hash = ipfs_add[0].get("Hash")
     token_uri = f"https://ipfs.io/ipfs/{ipfs_hash}?filename={file_name}"
-    return json.dumps({'cid' : ipfs_hash, 'token_uri' : token_uri})
+
+    key1 = Fernet(Fernet.generate_key())
+    key2 = Fernet(Fernet.generate_key())
+    master_key = MultiFernet([key1,key2])
+    master_key.encrypt(token_uri)
+    encrypted_tokenURI = master_key.encrypt(token_uri)
+
+    return json.dumps(
+        {'cid' : ipfs_hash, 'token_uri' : token_uri, 
+            'encrypted_tokenURI' : encrypted_tokenURI})
 
 
 def get_metadata_form(
@@ -105,4 +120,6 @@ async def adding_to_pinata(CID, metadata:str):
     return response.json()
 
 
+def getting_pinata_pinned():
+    pass
 

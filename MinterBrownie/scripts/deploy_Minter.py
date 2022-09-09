@@ -52,3 +52,6 @@ def main():
         except Exception as err:
             logging.debug(err)
             console.log(err)
+
+if __name__ == '__main__':
+    main()

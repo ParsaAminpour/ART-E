@@ -10,6 +10,31 @@ from dotenv import load_dotenv, find_dotenv
 from asgiref.sync import async_to_sync, sync_to_async
 console = Console()
 
+def estimating_valud(*args, **kwargs):
+    pass
+
+@async_to_sync
+async def adding_to_ipfs_and_get_tokenURI(token_id:int, image_path:str) -> str:
+    try:
+        ipfs = await ipfsApi.Client("127.0.0.1",port=5001)
+    except Exception as err:
+        logging.warning("The IPFS could't connect")
+        return False
+    
+    if not os.path.isdir(image_path) or\
+        image_path.split("/")[-1].split(".")[-1] not in ["png","jpg","jpeg"]:
+            logging.warning(f"The directory or file type is not valid")
+            return False
+    
+    file_name = image_path.split("/")[-1]
+
+    with Path(image_path).open("rb") as file:
+        ipfs_add = ipfs.add(file.read())
+
+    ipfs_hash = ipfs_add[0].get("Hash")
+    token_uri = f"https://ipfs.io/ipfs/{ipfs_hash}?filename={file_name}"
+    return json.dumps({'cid' : ipfs_hash, 'token_uri' : token_uri})
+
 
 def get_metadata_form(
     description:str, name:str, ipfs_uri:str
@@ -37,29 +62,6 @@ def get_metadata_form(
 
 
 @async_to_sync
-async def adding_to_ipfs_and_get_tokenURI(token_id:int, image_path:str) -> str:
-    try:
-        ipfs = await ipfsApi.Client("127.0.0.1",port=5001)
-    except Exception as err:
-        logging.warning("The IPFS could't connect")
-        return False
-    
-    if not os.path.isdir(image_path) or\
-        image_path.split("/")[-1].split(".")[-1] not in ["png","jpg","jpeg"]:
-            logging.warning(f"The directory or file type is not valid")
-            return False
-    
-    file_name = image_path.split("/")[-1]
-
-    with Path(image_path).open("rb") as file:
-        ipfs_add = ipfs.add(file.read())
-
-    ipfs_hash = ipfs_add[0].get("Hash")
-    token_uri = f"https://ipfs.io/ipfs/{ipfs_hash}?filename={file_name}"
-    return json.dumps({'cid' : ipfs_hash, 'token_uri' : token_uri})
-
-
-@async_to_sync
 async def adding_to_pinata(CID, metadata:str):
     if CID[:2] != "Qm" or len(CID) != 46: 
         raise ValueError("invalid CID")
@@ -82,7 +84,7 @@ async def adding_to_pinata(CID, metadata:str):
                 'attributes' : metadata_schema.get("attributes")
             }
         }       
-  })
+    })
 
     headers = {
         'pinata_api_key' : PINATA_API_KEY,

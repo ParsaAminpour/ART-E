@@ -17,6 +17,7 @@ contract Minter is ERC721URIStorage{
         public ERC721(collection_name, collection_symbol) {}
 
     function mint_dalle(string memory token_uri) public returns(uint256) {
+        require(token_counter.current() <= 3); // only could minting in three times
         require(!_exists(token_counter.current()), "This tokenId has already existed");
         // require();
         uint256 token_counter_before_minting = token_counter.current();

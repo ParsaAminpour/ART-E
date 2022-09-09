@@ -1,3 +1,5 @@
+from importlib.metadata import requires
+from ssl import ALERT_DESCRIPTION_INSUFFICIENT_SECURITY
 from graphene_django import DjangoObjectType, DjangoListField
 import graphene
 from .models import Artist, Art
@@ -21,5 +23,26 @@ class Query(graphene.ObjectType):
         return Art.objects.filter(art_owner = artist)
          
 
-schema = graphene.Schema(query=Query)
-  
+class ArtMutation(graphene.Mutation):
+    class Arguments:
+        art_name = graphene.String(required=True)
+        art_describe = graphene.String(required=True)
+        art_tokenId = graphene.Int()
+        art_cid = graphene.String(required=True)
+        art_tokenURI = graphene.String(required=True)
+    
+    art_field = graphene.Field(ArtType)
+
+    @classmethod
+    def mutate(cls, art_name_, art_describe_, art_tokenId_, art_cid_, art_tokenURI_):
+        that_art = Art.create(
+            art_name=art_name_, art_description=art_describe_, art_tokenId=art_tokenId_,
+                art_cid=art_cid_, art_tokenURI=art_tokenURI_)
+        that_art.save()
+        return ArtMutation(art_field=that_art)
+
+class bridge_mutation(graphene.ObjectType):
+    adding_art = ArtMutation.Field()
+
+schema = graphene.Schema(query=Query, mutation=ArtMutation)
+

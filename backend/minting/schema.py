@@ -39,7 +39,7 @@ class ArtMutation(graphene.Mutation):
             art_name=art_name_, art_description=art_describe_, art_tokenId=art_tokenId_,
                 art_cid=art_cid_, art_tokenURI=art_tokenURI_)
         that_art.save()
-        return ArtMutation(art_field=that_art)
+        return cls(art_field=that_art)
 
 
 class bridge_mutation(graphene.ObjectType):

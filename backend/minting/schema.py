@@ -1,8 +1,9 @@
+from distutils.command.build_scripts import first_line_re
 from importlib.metadata import requires
-from ssl import ALERT_DESCRIPTION_INSUFFICIENT_SECURITY
+from shutil import unregister_unpack_format
 from graphene_django import DjangoObjectType, DjangoListField
 import graphene
-from .models import Artist, Art
+from .models import Artist, Art, SimpleUser
 
 class ArtistType(DjangoObjectType):
     class Meta:
@@ -12,6 +13,11 @@ class ArtistType(DjangoObjectType):
 class ArtType(DjangoObjectType):
     class Meta:
         model = Art
+        fields = '__all__'
+
+class SimpleUserType(DjangoObjectType):
+    class Meta:
+        model=SimpleUser
         fields = '__all__'
 
 class Query(graphene.ObjectType):
@@ -34,16 +40,33 @@ class ArtMutation(graphene.Mutation):
     art_field = graphene.Field(ArtType)
 
     @classmethod
-    def mutate(cls, art_name_, art_describe_, art_tokenId_, art_cid_, art_tokenURI_):
+    def mutate(cls, root, info, art_name_, art_describe_, art_tokenId_, art_cid_, art_tokenURI_):
         that_art = Art.create(
             art_name=art_name_, art_description=art_describe_, art_tokenId=art_tokenId_,
                 art_cid=art_cid_, art_tokenURI=art_tokenURI_)
         that_art.save()
-        return ArtMutation(art_field=that_art)
+        return cls(art_field=that_art)
+
+
+class SimpleUserMutation(graphene.Mutation):
+    class Arguments:
+        username = graphene.String(required=True)
+        password = graphene.String(required=True)
+
+    user_field = graphene.Field(SimpleUserType)
+
+    @classmethod
+    def mutate(cls, root, info, username, password):
+        new_smpl_user = SimpleUser.objects.create(
+            username=username, password=password)
+        
+        new_smpl_user.save()    
+        return cls(user_field=new_smpl_user)
 
 
 class bridge_mutation(graphene.ObjectType):
     adding_art = ArtMutation.Field()
+    adding_simple_user = SimpleUserMutation.Field()
 
-schema = graphene.Schema(query=Query, mutation=ArtMutation)
+schema = graphene.Schema(query=Query, mutation=bridge_mutation)
 

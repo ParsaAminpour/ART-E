@@ -4,7 +4,7 @@ import "@nomicfoundation/hardhat-toolbox";
 const INFURA_API_LEY = process.env.WEB3_INFURA_ENDPOINT;
 
 const config: HardhatUserConfig = {
-  solidity: "0.8.19",
+  solidity: "0.8.20",
 };
 
 export default config;

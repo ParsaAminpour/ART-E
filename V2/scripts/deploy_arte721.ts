@@ -68,7 +68,9 @@ const main = async() => {
     ]
 
     const result = await provider_ipfs(file_choiced, process.env.MORALIS_API_KEY);
-    const picture_uri = result.result[0].path;
+    const picture_uri_path = result.result[0].path;
+    const picture_uri = picture_uri_path.slice(34);
+    
     await deploy_arte(picture_uri);
 }
 

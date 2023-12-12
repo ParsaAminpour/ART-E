@@ -1,13 +1,17 @@
-pragma solidity ^0.8.20;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts/utils/Base64.sol";
+import "./InternalMath.sol";
 
 /**
- * @title PaymentSplitter
+ * @title PaymentSplitter 
  * @dev This contract can be used when payments need to be received by a group
  * of people and split proportionately to some number of shares they own.
  */
 contract PaymentSplitter {
+  using InternalMath for uint256;
 
   event PayeeAdded(address account, uint256 shares);
   event PaymentReleased(address to, uint256 amount);
@@ -81,7 +85,8 @@ contract PaymentSplitter {
   function release(address account) public {
     require(_shares[account] > 0);
 
-    uint256 totalReceived = address(this).balance.add(_totalReleased);
+    // uint256 totalReceived = address(this).balance.add(_totalReleased);
+    uint256 totalReceived = address(this).balance + _totalReleased;
     uint256 payment = totalReceived.mul(
       _shares[account]).div(
         _totalShares).sub(
@@ -93,7 +98,7 @@ contract PaymentSplitter {
     _released[account] = _released[account].add(payment);
     _totalReleased = _totalReleased.add(payment);
 
-    account.transfer(payment);
+    payable(account).transfer(payment);
     emit PaymentReleased(account, payment);
   }
 

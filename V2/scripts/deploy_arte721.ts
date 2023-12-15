@@ -1,6 +1,7 @@
 import { ethers } from "hardhat";
 import Moralis from "moralis";
 import fs from "fs";
+import { prompts } from "prompts";
 require("dotenv").config();
 
 
@@ -58,6 +59,10 @@ const deploy_arte = async(token_uri: string): Promise<void> => {
     console.log("\n");
 }
 
+const generate_openai_picture = async(
+    openai_key: string, text: string): Promise<string> => {
+    return "";
+}
 
 const main = async() => {
     const file_choiced: file_type[] = [

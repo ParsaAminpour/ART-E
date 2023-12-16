@@ -11,7 +11,7 @@ describe("Testing the staking algorithm workflow", async() => {
     const acc: string = accounts[0].address;
     const receiver: string = accounts[1].address;
 
-    beforeEach(async() => {
+    before(async() => {
         ARTE721Contract = await ethers.deployContract("ARTE721", [acc]);
         ARTE1155Contract = await ethers.deployContract("ARTE1155", [acc]);
 
@@ -24,11 +24,9 @@ describe("Testing the staking algorithm workflow", async() => {
 
         console.log(`Contract deployed to: ${await StakingContract.getAddress()}\n`);
     })
-    describe("Constructor", () => {
-        it("Checking Staking contract constructor sets correctly", async() => {
-            expect(await StakingContract.tokenReward())
-                .to.equal(ARTE1155Contract.getAddress());
-        })
+    it("Checking Staking contract constructor sets correctly", async() => {
+        expect(await StakingContract.tokenReward())
+            .to.equal(ARTE1155Contract.getAddress());
     })
 })
 

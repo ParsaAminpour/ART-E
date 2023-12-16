@@ -10,50 +10,69 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "hardhat/console.sol";
+import "./ARTE721.sol";
 
 // @author <a href="mailto:parsa.aminpour@gmail.com"> ParsaAminpour </a>
 contract StakingContract is Ownable, ReentrancyGuard, AccessControl {
     using Address for address;
     using Math for uint256;
 
+
     error StakingContract__NoStakedBefore();
 
-    IERC1155 tokenReward;
-    stake_workflow_status internal workflow;
-    uint256 internal top_share_amount; 
-    uint8 private immutable const_reward;
 
     struct stake_workflow_status {
         uint256 last_time_update;
         uint256 total_staked;
     }
 
+
+    IERC1155 public tokenReward;
+    IERC721 public arte_nft;
+    stake_workflow_status public workflow; // should be internal
+    uint256 internal top_share_amount; 
+    uint8 public immutable const_reward; // should be private
+
+
     event withdraw_event(address indexed _staker, uint indexed _amount);
     event stake_event(address indexed _staker, uint indexed _amount);
     event withdraw_reward_event(address indexed _staker, uint indexed _amount);
+
+
+    // staker address  => (nft tokenId => amount staked)
+    mapping(address => mapping(uint256 => uint256)) private userTokenReward;
+    mapping(address => uint256) private _balances;
+    mapping(address => bool) private isTopShares;
+
 
     /*
     @param _tokenReward which is the reward NFT token that we will distribute
     @param _reward_amount is the amount to distribute between share holders per day
     */
-    constructor(IERC1155 _tokenReward, uint8 _reward_amount) Ownable(msg.sender) {
+    constructor(IERC721 _nft_contract ,IERC1155 _tokenReward, uint8 _reward_amount) Ownable(msg.sender) {
+        arte_nft = _nft_contract;
         tokenReward = _tokenReward;
 
         workflow = stake_workflow_status(
-            block.timestamp, 0);
+            block.timestamp, 10); // init total_staked 
 
         const_reward = _reward_amount;
     }
 
 
-    // staker address  => (nft contract address => amount staked)
-    mapping(address => mapping(address => uint256)) private userTokenReward;
-    mapping(address => uint256) private _balances;
-    mapping(address => bool) private isTopShares;
-
-
 
     modifier AssetModifier(address _staker) { _; }
+
+
+
+
+    // update the current token reward to token reward based on the efficient algorithm which
+    // explained in this link <link>
+    function update_user_token_reward() public view returns(uint256 result){
+        console.log(workflow.total_staked);
+        result =  (const_reward / workflow.total_staked) * (block.timestamp - workflow.last_time_update);
+    }
+
 
     /*
     @dev this function will update the stake algorithm status workflow and adding the balance belongs share-holder.
@@ -62,13 +81,16 @@ contract StakingContract is Ownable, ReentrancyGuard, AccessControl {
     @param _nftStaked is the number of nft contract which staked
     @param _amount is the amount of staked to the nft contract (_nftStaked)
     */
-    function Staking(address _staker, IERC721 _nftStaked ,uint256 _amount)
+    function Staking(address _staker, uint256 _amount, uint8 _tokenId)
     external 
     nonReentrant()
     returns(uint256 _new_balance) {
+        require(arte_nft.ownerOf(_tokenId) == _staker, "staker must be the owner of the token");
+        require(_amount > 0, "amount must be more than 0");
+
         // update user reward per token
-        userTokenReward[_staker][address(_nftStaked)] =
-            userTokenReward[_staker][address(_nftStaked)] + 
+        userTokenReward[_staker][_tokenId] =
+            userTokenReward[_staker][_tokenId] + 
                 update_user_token_reward();
                 
         _balances[_staker] += _amount;
@@ -85,25 +107,20 @@ contract StakingContract is Ownable, ReentrancyGuard, AccessControl {
         _new_balance = _balances[_staker];
     }
 
-    // update the current token reward to token reward based on the efficient algorithm which
-    // explained in this link <link>
-    function update_user_token_reward() public view returns(uint256 result){
-        result =  (const_reward / workflow.total_staked) * (block.timestamp - workflow.last_time_update);
-    }
 
-    function Witdrawing(address _staker, IERC721 _nftStaked, uint256 _amount)
+    function Witdrawing(address _staker, uint256 _tokenId, uint256 _amount)
     external
     nonReentrant()
     returns(uint256 _remained_balance) {
-        require(userTokenReward[_staker][address(_nftStaked)] > 0, "NFT contract address is invalid or insufficient balance");
+        require(userTokenReward[_staker][_tokenId] > 0, "NFT contract address is invalid or insufficient balance");
         require(_balances[_staker] > 0, "You have not already own stake balance in this contract");
         require(_amount > 0, "You have not already");
 
         workflow.total_staked -= _amount;
         workflow.last_time_update = block.timestamp;
 
-        userTokenReward[_staker][address(_nftStaked)] = 
-            userTokenReward[_staker][address(_nftStaked)] + 
+        userTokenReward[_staker][_tokenId] = 
+            userTokenReward[_staker][_tokenId] + 
                 update_user_token_reward();
 
         _balances[_staker] -= _amount;

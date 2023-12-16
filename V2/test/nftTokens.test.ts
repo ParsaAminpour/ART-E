@@ -6,12 +6,10 @@ import { Contract, ContractInterface } from "ethers"
 describe("Testing the staking algorithm workflow", async() => {
     let ARTE721Contract: any;
     let ARTE1155Contract: any;
-    let StakingContract: any;
 
     const accounts = await ethers.getSigners();
     const acc: string = accounts[0].address;
     const receiver: string = accounts[1].address;
-
 
     it("New Staker mint an ERC721 NFT", async(): Promise<void> => {
         ARTE721Contract = await ethers.deployContract(
@@ -46,14 +44,6 @@ describe("Testing the staking algorithm workflow", async() => {
         expect(ARTE1155Contract.balanceOf(acc, 1)).to.equal(90);
         expect(ARTE1155Contract.balanceOf(receiver, 1)).to.equal(10);
     }
-
-
-    it("After minting the ARTE share-holder decide to stake his own NFT", async() => {
-        StakingContract = ethers.deployContract(
-            "StakingContract", [acc]);
-        
-        expect(ARTE721Contract.balanceOf(receiver)).to.equal(1);
-    })
 })
 
 

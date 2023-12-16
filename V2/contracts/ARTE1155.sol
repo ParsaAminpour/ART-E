@@ -6,8 +6,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Pausable.sol";
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 
-contract ARTE is ERC1155, Ownable, ERC1155Pausable, ERC1155Supply {
-    constructor(address initialOwner) ERC1155("") Ownable(initialOwner) {}
+contract ARTE1155 is ERC1155, Ownable, ERC1155Pausable, ERC1155Supply {
+    constructor(address initialOwner) ERC1155("ARTE1155") Ownable(initialOwner) {}
 
     function setURI(string memory newuri) public onlyOwner {
         _setURI(newuri);

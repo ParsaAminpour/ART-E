@@ -9,12 +9,14 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "hardhat/console.sol";
 
 // @author <a href="mailto:parsa.aminpour@gmail.com"> ParsaAminpour </a>
 contract StakingContract is Ownable, ReentrancyGuard, AccessControl {
     using Address for address;
     using Math for uint256;
 
+    error StakingContract__NoStakedBefore();
 
     IERC1155 tokenReward;
     stake_workflow_status internal workflow;
@@ -30,6 +32,10 @@ contract StakingContract is Ownable, ReentrancyGuard, AccessControl {
     event stake_event(address indexed _staker, uint indexed _amount);
     event withdraw_reward_event(address indexed _staker, uint indexed _amount);
 
+    /*
+    @param _tokenReward which is the reward NFT token that we will distribute
+    @param _reward_amount is the amount to distribute between share holders per day
+    */
     constructor(IERC1155 _tokenReward, uint8 _reward_amount) Ownable(msg.sender) {
         tokenReward = _tokenReward;
 

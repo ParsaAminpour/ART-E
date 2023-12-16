@@ -15,6 +15,7 @@
     "ethers": "^6.8.1",
     "hardhat": "^2.18.3",
     "hardhat-gas-reporter": "^1.0.9",
+    "mocha": "^10.2.0",
     "solidity-coverage": "^0.8.5",
     "ts-node": "^10.9.1",
     "typechain": "^8.3.2",

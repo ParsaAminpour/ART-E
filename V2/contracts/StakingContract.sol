@@ -13,6 +13,8 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 // @author <a href="mailto:parsa.aminpour@gmail.com"> ParsaAminpour </a>
 contract StakingContract is Ownable, ReentrancyGuard, AccessControl {
     using Address for address;
+    using Math for uint256;
+
 
     IERC1155 tokenReward;
     stake_workflow_status internal workflow;

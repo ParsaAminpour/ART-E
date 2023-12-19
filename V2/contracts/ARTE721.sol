@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Pausable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract ARTE721 is ERC721, ERC721URIStorage, ERC721Pausable, Ownable {
+    uint256 private total_staked;
     constructor(address initialOwner)
         ERC721("ARTE", "ARTE")
         Ownable(initialOwner)
@@ -28,6 +29,7 @@ contract ARTE721 is ERC721, ERC721URIStorage, ERC721Pausable, Ownable {
     {
         _safeMint(to, tokenId);
         _setTokenURI(tokenId, uri);
+        unchecked { total_staked ++; }
     }
 
     // The following functions are overrides required by Solidity.
@@ -57,4 +59,8 @@ contract ARTE721 is ERC721, ERC721URIStorage, ERC721Pausable, Ownable {
     {
         return super.supportsInterface(interfaceId);
     }
+
+    function getTotalStaked() public view returns(uint256 total) {
+        total = total_staked;
+    } 
 }

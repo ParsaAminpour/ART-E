@@ -13,6 +13,9 @@ describe("Testing the staking algorithm workflow", () => {
     let receiver: HardhatEthersSigner;
     let another_acc: HardhatEthersSigner;
 
+
+
+    // in this section receiver address minted 1 ARTE721 nft
     beforeEach(async() => {
         accounts = await ethers.getSigners();
         [acc, receiver, another_acc] = await ethers.getSigners();
@@ -32,6 +35,8 @@ describe("Testing the staking algorithm workflow", () => {
         console.log(`Contract deployed to: ${await StakingContract.getAddress()}\n`);
     })
 
+
+
     describe('constructor', () => { 
         it("Checking Staking contract constructor sets correctly", async() => {
             const arte_contract_address = await StakingContract.arte_nft();
@@ -44,7 +49,7 @@ describe("Testing the staking algorithm workflow", () => {
 
             const stake_workflow = await StakingContract.workflow();
             expect(stake_workflow[1]) // which is total_staked
-                .to.equal(10);
+                .to.equal(1);
             
             expect(await StakingContract.const_reward())
                 .to.equal(1);
@@ -60,21 +65,42 @@ describe("Testing the staking algorithm workflow", () => {
                 .to.equal(StakingContract.address);
             
             // for incorrect amount
-            await expect(ConnectedStakingContract.Staking(another_acc.address, 10, 1))
+            await expect(ConnectedStakingContract.Staking(another_acc.address, 1))
                 .to.be.revertedWith(
                     "staker must be the owner of the token"
                 )
             
-            await expect(ConnectedStakingContract.Staking(receiver.address, 0, 1))
-                    .to.be.revertedWith(
-                        "amount must be more than 0"
-                    );
         });
 
-        it("", async() => {
+        // Staking function workflow analyzing
+        it("checking the state variable midifications after Staking", async() => {
+            const ConnectedStakingContract = await StakingContract.connect(
+                receiver);
             
-        })
+            // State variable before calling Staking function
+            expect(await ConnectedStakingContract.getBalance(receiver.address))
+                .to.equal(0);
+
+            await ConnectedStakingContract.Staking(receiver.address, 1);
+            
+            expect(await ARTE721Contract.getTotalStaked()).to.equal(1);
+
+            expect(await ConnectedStakingContract.getUserTokenPerReward(receiver.address))
+                .to.equal(BigInt(1e18));
+            // console.log("//////////////////////////////")
+            // await ConnectedStakingContract.update_user_token_reward();
+            // console.log("//////////////////////////////");
+        });
+
+        it("checking the update_user_token_reward workflow", async() => {})
     });
-})
+
+
+    describe("Withdraw function", () => {
+        it("checking the function requirements", async() => {
+
+        })
+    })
+});
 
 

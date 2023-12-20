@@ -5,7 +5,7 @@ import "solidity-coverage";
 // require("@nomiclabs/hardhat-etherscan");
 require("dotenv").config();
 
-const INFURA_API_LEY = process.env.WEB3_INFURA_ENDPOINT;
+const INFURA_API_KEY = process.env.WEB3_INFURA_ENDPOINT;
 
 const config: HardhatUserConfig = {
   solidity: "0.8.20",
@@ -20,7 +20,5 @@ const config: HardhatUserConfig = {
     noColors: true,
   }
 };
-
-
 
 export default config;

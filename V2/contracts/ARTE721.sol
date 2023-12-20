@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Pausable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "./StakingContract.sol";
 
 contract ARTE721 is ERC721, ERC721URIStorage, ERC721Pausable, Ownable {
     uint256 private total_staked;

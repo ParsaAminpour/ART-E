@@ -2,6 +2,9 @@ import { expect } from "chai";
 import { ethers, network } from "hardhat";
 import { Contract, ContractInterface } from "ethers"
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { ConnectionAcquireTimeoutError } from "sequelize";
+import { setMaxIdleHTTPParsers } from "http";
+import { time } from "@nomicfoundation/hardhat-network-helpers";
 
 describe("Testing the staking algorithm workflow", () => {
     let ARTE721Contract: any;
@@ -12,7 +15,7 @@ describe("Testing the staking algorithm workflow", () => {
     let acc: HardhatEthersSigner;
     let receiver: HardhatEthersSigner;
     let another_acc: HardhatEthersSigner;
-
+    let ConnectedStakingContract: any;
 
 
     // in this section receiver address minted 1 ARTE721 nft
@@ -29,8 +32,11 @@ describe("Testing the staking algorithm workflow", () => {
         StakingContract = await StakingFactory.deploy(
             ARTE721Contract.getAddress(),
             ARTE1155Contract.getAddress(),
-            1,
+            1, // reward_amount -> R
             { from: acc.address })
+
+        ConnectedStakingContract = await StakingContract.connect(
+            receiver);    
 
         console.log(`Contract deployed to: ${await StakingContract.getAddress()}\n`);
     })
@@ -58,9 +64,6 @@ describe("Testing the staking algorithm workflow", () => {
     
     describe("Staking function", () => {
         it("checking the function requirements", async() => {
-            const ConnectedStakingContract = await StakingContract.connect(
-                receiver);
-
             expect(await ConnectedStakingContract.address)
                 .to.equal(StakingContract.address);
             
@@ -74,9 +77,6 @@ describe("Testing the staking algorithm workflow", () => {
 
         // Staking function workflow analyzing
         it("checking the state variable midifications after Staking", async() => {
-            const ConnectedStakingContract = await StakingContract.connect(
-                receiver);
-            
             // State variable before calling Staking function
             expect(await ConnectedStakingContract.getBalance(receiver.address))
                 .to.equal(0);
@@ -87,18 +87,38 @@ describe("Testing the staking algorithm workflow", () => {
 
             expect(await ConnectedStakingContract.getUserTokenPerReward(receiver.address))
                 .to.equal(BigInt(1e18));
-            // console.log("//////////////////////////////")
-            // await ConnectedStakingContract.update_user_token_reward();
-            // console.log("//////////////////////////////");
         });
 
         it("checking the update_user_token_reward workflow", async() => {})
     });
 
 
+    // test cases related to withdraw function's work-flow
     describe("Withdraw function", () => {
         it("checking the function requirements", async() => {
 
+            
+            await expect(ConnectedStakingContract.Withdrawing(another_acc.address))
+                .to.be.revertedWith("You have not been included to this staking smart contract yet");
+        })
+
+        it("checking the state variable midifications after Staking", async() => {
+            await ConnectedStakingContract.Staking(receiver.address, 1);
+
+            const _receiver_balance = await ConnectedStakingContract.getBalance(receiver.address);
+            const r = await ConnectedStakingContract.getUserTokenPerReward(receiver.address);
+            const current_reward_claimed = await ConnectedStakingContract.getRewardAmountForEarn(receiver.address);
+
+            console.log(_receiver_balance + '\n');
+            console.log(`r is ${r} which is ${r / BigInt(1e18)}`);
+            console.log(current_reward_claimed + '\n');
+            
+
+            
+            // we should set time delay duration to testing staking algorithm work-flow
+            await time.increase(3600);
+            console.log('test')
+            // mine a new block with timestamp `newTimestamp`;
         })
     })
 });

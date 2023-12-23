@@ -35,6 +35,7 @@ contract StakingContract is Ownable, ReentrancyGuard, AccessControl {
     IERC721 public arte_nft;
     stake_workflow_status public workflow; // should be internal
     uint256 internal top_share_amount; 
+    uint16 internal last_reward_per_user;
     uint8 public immutable const_reward; // should be private
 
 
@@ -45,10 +46,13 @@ contract StakingContract is Ownable, ReentrancyGuard, AccessControl {
 
     // staker address  => (ARTE1155 tokenId => amount staked)
     // mapping(address => mapping(uint256 => uint256)) private userTokenReward;
-    mapping(address => staker_last_reward) private userTokenReward;
-    mapping(address => uint256) private reward_balance;
-    mapping(address => bool) private isTopShares;
-    mapping(address => uint256) private reward_amount_for_earn;
+    mapping(address => staker_last_reward) private userTokenReward; // r
+
+    mapping(address => uint256) private staked_balance; // balance of ARTE721
+
+    mapping(address => uint256) private reward_amount_for_earn; // balance of ARTE1155 tokenId
+
+    mapping(address => bool) private isTopShares; // For governance sys approach
 
 
     /*
@@ -71,7 +75,7 @@ contract StakingContract is Ownable, ReentrancyGuard, AccessControl {
     modifier AssetModifier(address _staker) { _; }
 
     modifier OnlyStaker(address _caller) {
-        if(reward_balance[_caller] == 0) {
+        if(staked_balance[_caller] == 0) {
             revert StakingContract__NoStakedBefore();
         }
         _;
@@ -85,10 +89,10 @@ contract StakingContract is Ownable, ReentrancyGuard, AccessControl {
     @dev explained in this link <link>
     @NOTE: this algorithm will be coded in Inline Assembly format ASAP.
     */
-    function update_last_time_reward() public view returns(uint256 result){
+    function _update_last_time_reward() public view returns(uint256 result){
         uint256 first = ((const_reward * 1e18) / (workflow.total_staked));
         uint256 second = (block.timestamp - workflow.last_time_update);
-        result = first * second;
+        result = last_reward_per_user + (first * second);
     }
 
 
@@ -107,49 +111,27 @@ contract StakingContract is Ownable, ReentrancyGuard, AccessControl {
 
         // update user reward per token
         userTokenReward[_staker].last_time_updated = block.timestamp;
-        userTokenReward[_staker].last_reward = update_last_time_reward();
+        userTokenReward[_staker].last_reward = _update_last_time_reward();
         // console.log(userTokenReward[_staker]);
 
         workflow.last_time_update = block.timestamp;
         workflow.total_staked ++;
 
         // Will be used in calculating final reward in terms of _balance * (rf - ri)                
-        reward_balance[_staker] ++;
+        staked_balance[_staker] ++;
 
         // the bug relates to modify top_share_amount in withdraw will be solved ASAP
-        top_share_amount =  top_share_amount < reward_balance[_staker] 
-            ? reward_balance[_staker] : top_share_amount;
+        top_share_amount =  top_share_amount < staked_balance[_staker] 
+            ? staked_balance[_staker] : top_share_amount;
 
 
-        _new_balance = reward_balance[_staker];
+        _new_balance = staked_balance[_staker];
     }
 
 
-    /*
-    @dev the _staker can call this function to get its reward.
-    @dev the optimized and summerized calculation is the 
-        (_staker reward balance) * (current time - last time _staker change ths workflow)   
-    @param _staker is the reward owner
-    @return success is the function accomplished status3 
-    NOTE: this function will use ARTE1155 smart contract to distribute the reward.
-    */
-    function _earnReward(
-        address _staker, uint256 new_reward_amount
-    ) private nonReentrant() returns(bool success) {
-        // calculating reward based on Stake reward algorithm
-        staker_last_reward memory staker_last_data = userTokenReward[_staker];
 
-        uint256 reward_amount = reward_balance[_staker] * (
-            new_reward_amount - staker_last_data.last_reward
-        );    
-    
-        reward_amount_for_earn[_staker] += reward_amount;
+    function safeStateChanging() private returns(bool) {}
 
-        require(reward_amount_for_earn[_staker] >= reward_amount, "Some function processcalculation error happened");
-        userTokenReward[_staker].last_reward = new_reward_amount;
-        userTokenReward[_staker].last_time_updated = block.timestamp;
-        success = true;
-    }
 
 
     /*
@@ -163,54 +145,73 @@ contract StakingContract is Ownable, ReentrancyGuard, AccessControl {
     @param _staker is the address os wallet which staked the nft
     @return _remained_balance
     */
-    function Witdrawing(address _staker) // withdraw ERC721 nft reward 
-    external
-    nonReentrant()
-    OnlyStaker(_staker)
-    returns(uint256 _remained_balance) {
-        require(userTokenReward[_staker].last_reward > 0, "NFT contract address is invalid or insufficient balance");
-        require(reward_balance[_staker] > 0, "You have not already own stake balance in this contract");
+    function Withdrawing(address _staker) external returns(bool succeed) {
+        require(staked_balance[_staker] > 0 || userTokenReward[_staker].last_reward > 0,
+            "You have not been included to this staking smart contract yet");
 
-        bool result = _earnReward(_staker, update_last_time_reward());
-        require(result, "An error occurred in eranreward function");
+        // calculate reward
+        bool result = calculate_reward(_staker);
+        require(result, "reward calculation crashed to some problem");
 
-        // There is always a (x > 0) amount stored in total_staked by the contract owner                
-        unchecked{ workflow.total_staked --; }
+        // updating workflow
         workflow.last_time_update = block.timestamp;
+        workflow.total_staked --;
 
-        reward_balance[_staker] --; // because its transfering one specific NFT token.
-        _remained_balance = reward_balance[_staker];
+        // change userTokenReward
+        userTokenReward[_staker].last_reward  = _update_last_time_reward();
+        userTokenReward[_staker].last_time_updated = workflow.last_time_update;
+
+        // change stakedBalance
+        staked_balance[_staker] --;
+        succeed = true;
+    }
+
+
+    /*
+    @dev the _staker can call this function to get its reward.
+    @dev the optimized and summerized calculation is the 
+        (_staker reward balance) * (current time - last time _staker change ths workflow)   
+    @param _staker is the reward owner
+    @return success is the function accomplished status3 
+    NOTE: this function will use ARTE1155 smart contract to distribute the reward.
+    */
+    function calculate_reward(address _staker) private returns(bool succeed) {
+        // updating reward_amount_for_earn
+        uint256 tmp_rf = _update_last_time_reward();
+        uint256 reward_calculated = staked_balance[_staker] * (
+            tmp_rf - userTokenReward[_staker].last_reward
+        );
+
+        reward_amount_for_earn[_staker] += reward_calculated;
+        succeed = true;
     }
 
     /*
     */
-    function withdrawing_reward(
-        address _staker
+    function claim_reward(
+        address _staker,
+        uint _reward_token_id
     )  external nonReentrant() OnlyStaker(_staker) returns(bool result) {
         require(reward_amount_for_earn[_staker] >= 1, 
             "reward amount is less then 0, you need more reward amount to earn ARTE1155 token");
 
-        uint256 arte1155_balance_before_transfering = tokenReward.balanceOf(_staker, 1);
+        uint256 arte1155_balance_before_transfering = tokenReward.balanceOf(_staker, _reward_token_id);
         
         tokenReward.safeTransferFrom(
-            address(this), _staker, 1, reward_amount_for_earn[_staker], "");
+            address(this), _staker, _reward_token_id, reward_amount_for_earn[_staker], "");
         
-        require(arte1155_balance_before_transfering < tokenReward.balanceOf(_staker, 1),
+        require(arte1155_balance_before_transfering < tokenReward.balanceOf(_staker, _reward_token_id),
             "Some error occurred in trasnfering ARTE1155 token");
 
-        // state variable modiying
+        // state variable updating for withdrawing whole calimed reward 
         reward_amount_for_earn[_staker] = 0;
-        isTopShares[_staker] == true ? false : true;
+        isTopShares[_staker] == false;
         result = true;
     }
 
 
 
-    function getBalance(address _share_holder) public view returns(uint256 share) {
-        share = reward_balance[_share_holder];
-    }
-
-
+    // Accesss (read-access) to mappings in contract
     // Getting private state variables status
     function getUserTokenPerReward(
         address _staker
@@ -218,7 +219,139 @@ contract StakingContract is Ownable, ReentrancyGuard, AccessControl {
         reward_amount = userTokenReward[_staker].last_reward;
     }
 
+
+    function getBalance(address _share_holder) public view returns(uint256 share) {
+        share = staked_balance[_share_holder];
+    }
+
+
+    function getRewardAmountForEarn(address _staker) public view returns(uint256 reward_amount) {
+        reward_amount = reward_amount_for_earn[_staker];
+    }
+
+
     function getIsTopShare(address _staker) public view returns(bool _is) {
         _is = isTopShares[_staker];
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    // /*
+    // NOTE: this function will call during the ARTE721 token transfering process in ARTE721 contract.
+    //     This function will just modifying algorithm states.
+
+    // @dev this function will update the stake algorithm status workflow and removing the balance belongs share-holder.
+    // @dev in this staking algorithm, Withdrawing operations is either a significatn point in the histogram plot.
+    // @dev in this function the user could just withdraw his whole balance from the contract to avoiding calculating 
+    //     compromised calculation, because it's just a training project. 
+    // @param _staker is the address os wallet which staked the nft
+    // @return _remained_balance
+    // */
+    // function Witdrawing(address _staker) // withdraw ERC721 nft reward 
+    // external
+    // nonReentrant()
+    // OnlyStaker(_staker)
+    // returns(uint256 _remained_balance) {
+    //     require(userTokenReward[_staker].last_reward > 0, "");
+    //     require(staked_balance[_staker] > 0, "You have not already own stake balance in this contract");
+
+    //     // logs
+    //     console.log(userTokenReward[_staker].last_reward);
+    //     console.log(staked_balance[_staker]);
+
+
+    //     staker_last_reward memory staker_last_data = userTokenReward[_staker];
+
+    //     bool result = calculate_reward(_staker, staker_last_data.last_reward);
+    //     require(result, "An error occurred in eranreward function");
+
+    //     // There is always a (x > 0) amount stored in total_staked by the contract owner                
+    //     unchecked{ workflow.total_staked --; }
+    //     workflow.last_time_update = block.timestamp;
+
+    //     staked_balance[_staker] --; // because its transfering one specific NFT token.
+    //     _remained_balance = staked_balance[_staker];
+    // }
+
+
+
+    // /*
+    // @dev the _staker can call this function to get its reward.
+    // @dev the optimized and summerized calculation is the 
+    //     (_staker reward balance) * (current time - last time _staker change ths workflow)   
+    // @param _staker is the reward owner
+    // @return success is the function accomplished status3 
+    // NOTE: this function will use ARTE1155 smart contract to distribute the reward.
+    // */
+    // function calculate_reward(
+    //     address _staker, uint256 _last_reward
+    // ) private nonReentrant() returns(bool success) {
+    //     // calculating reward based on Stake reward algorithm
+    //     staker_last_reward memory staker_last_data = userTokenReward[_staker];
+
+    //     // for checking
+    //     uint init_reward_amount_for_earn = reward_amount_for_earn[_staker];
+
+    //     // optimized formula for: (balance) * (r(f) - r(i))
+    //     uint256 reward_amount = staked_balance[_staker] * (
+    //         userTokenReward[_staker].last_reward - _last_reward
+    //     );    
+
+    //     // reward_amount_for_earn will use in withdrawing_reward() function
+    //     reward_amount_for_earn[_staker] += reward_amount;
+    //     require(reward_amount_for_earn[_staker] > init_reward_amount_for_earn, "reward amount doesn't changed");
+
+    //     require(reward_amount_for_earn[_staker] >= reward_amount, "Some function processcalculation error happened");
+
+    //     userTokenReward[_staker].last_reward = _update_last_time_reward();
+    //     userTokenReward[_staker].last_time_updated = block.timestamp;
+    //     success = true;
+    // }

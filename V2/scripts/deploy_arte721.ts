@@ -2,6 +2,7 @@ import { ethers } from "hardhat";
 import Moralis from "moralis";
 import fs from "fs";
 import { prompts } from "prompts";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 require("dotenv").config();
 
 
@@ -34,14 +35,14 @@ const provider_ipfs = async(
         abi: file,
     })
 
-    // console.log(response.result);
+    console.log(response.result);
     return response;
 }
 
 // Deploying ARTE ERC-721 smart contract
-const deploy_arte = async(token_uri: string): Promise<void> => {
-    const accounts = await ethers.getSigners();
-    const acc = accounts[0].address;
+const deploy_arte = async(acc: HardhatEthersSigner,token_uri: string): Promise<void> => {
+    // const accounts = await ethers.getSigners();
+    // const acc = accounts[0].address;
 
     const arte_contract = await ethers.deployContract(
         "ARTE721", [acc]);
@@ -49,7 +50,7 @@ const deploy_arte = async(token_uri: string): Promise<void> => {
     console.log(await arte_contract.getAddress());
 
     const tx = await arte_contract.safeMint(
-        accounts[1].address, 1, token_uri
+        acc.address, 1, token_uri
     )
     tx.wait(1);
     
@@ -64,7 +65,7 @@ const generate_openai_picture = async(
     return "";
 }
 
-const main = async() => {
+const deploy_arte721 = async(acc: HardhatEthersSigner) => {
     const file_choiced: file_type[] = [
         {
             path: "./scripts/test_pic.png",
@@ -76,10 +77,9 @@ const main = async() => {
     const picture_uri_path = result.result[0].path;
     const picture_uri = picture_uri_path.slice(34);
     
-    await deploy_arte(picture_uri);
+    await deploy_arte(acc, picture_uri);
 }
 
-main().catch((error) => {
-    console.log(error);
-    process.exitCode = 1;
-});
+
+export default deploy_arte721;
+

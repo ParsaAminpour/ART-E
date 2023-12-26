@@ -42,6 +42,7 @@ contract ARTE721 is ERC721, ERC721URIStorage, ERC721Pausable, Ownable {
     {
         return super._update(to, tokenId, auth);
     }
+    
 
     function tokenURI(uint256 tokenId)
         public

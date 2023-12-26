@@ -60,9 +60,15 @@ contract StakingContract is Ownable, ReentrancyGuard, AccessControl {
     @param _reward_amount is the amount to distribute between share holders per day
     */
     constructor(uint8 _reward_amount) 
-    Ownable(msg.sender) {
-        arte_nft = new ARTE721(msg.sender);
-        tokenReward = new ARTE1155(msg.sender);
+    Ownable(msg.sender) 
+    {
+        arte_nft = new ARTE721(address(this));
+        tokenReward = new ARTE1155(address(this));
+
+        console.log(address(arte_nft));
+        console.log(address(tokenReward));
+        console.log("the msg.sedner is:");
+        console.log(msg.sender);
 
         workflow = stake_workflow_status(
             block.timestamp, 1); // init total_staked 
@@ -101,11 +107,11 @@ contract StakingContract is Ownable, ReentrancyGuard, AccessControl {
     @param _staker is the address os wallet which staked the nft
     @return _new_balance is the new reward balance of ARTE1155 
     */
-    function Staking(address _staker, uint8 _tokenId)
+    function Staking(address _staker, uint256 _tokenId)
     external 
     nonReentrant()
     returns(uint256 _new_balance) {
-        require(arte_nft.ownerOf(_tokenId) == _staker, "staker must be the owner of the token");
+        // require(arte_nft.ownerOf(_tokenId) != _staker, "staker must be the owner of the token");
         
         arte_nft.safeMint(_staker, _tokenId, "");
 
@@ -145,10 +151,13 @@ contract StakingContract is Ownable, ReentrancyGuard, AccessControl {
     @param _staker is the address os wallet which staked the nft
     @return _remained_balance
     */
-    function Withdrawing(address _staker, uint _token_id) external returns(bool succeed) {
+    function Withdrawing(
+        address _staker,
+        uint256 _token_id
+        ) external nonReentrant() OnlyStaker(_staker) returns(bool succeed) {
+
         require(arte_nft.ownerOf(_token_id) == _staker, "You are not owner of this tokenId");
-        require(staked_balance[_staker] > 0 || userTokenReward[_staker].last_reward > 0,
-            "You have not been included to this staking smart contract yet");
+        require(userTokenReward[_staker].last_reward > 0, "You have not been included to this staking smart contract yet");
 
         // calculate reward
         bool result = calculate_reward(_staker);
@@ -193,7 +202,7 @@ contract StakingContract is Ownable, ReentrancyGuard, AccessControl {
     */
     function claim_reward(
         address _staker,
-        uint _reward_token_id
+        uint256 _reward_token_id
     )  external nonReentrant() OnlyStaker(_staker) returns(bool result) {
         require(reward_amount_for_earn[_staker] >= 1, 
             "reward amount is less then 0, you need more reward amount to earn ARTE1155 token");
@@ -237,6 +246,14 @@ contract StakingContract is Ownable, ReentrancyGuard, AccessControl {
 
     function getIsTopShare(address _staker) public view returns(bool _is) {
         _is = isTopShares[_staker];
+    }
+
+    function getARTE721() public view returns(address) {
+        return address(arte_nft);
+    }
+
+    function getARTE1155() public view returns(address) {
+        return address(tokenReward);
     }
 }
 

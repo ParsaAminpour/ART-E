@@ -30,8 +30,6 @@ describe("Testing the staking algorithm workflow", () => {
 
         const StakingFactory = await ethers.getContractFactory("StakingContract");
         StakingContract = await StakingFactory.deploy(
-            ARTE721Contract.getAddress(),
-            ARTE1155Contract.getAddress(),
             1, // reward_amount -> R
             { from: acc.address })
 

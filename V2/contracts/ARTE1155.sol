@@ -7,7 +7,9 @@ import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Pausable.sol";
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 
 contract ARTE1155 is ERC1155, Ownable, ERC1155Pausable, ERC1155Supply {
-    constructor(address initialOwner) ERC1155("ARTE1155") Ownable(initialOwner) {}
+    constructor(address initialOwner) ERC1155("ARTE1155") Ownable(initialOwner) {
+        super._mint(msg.sender, 1, 100, "");
+    }
 
     function setURI(string memory newuri) public onlyOwner {
         _setURI(newuri);

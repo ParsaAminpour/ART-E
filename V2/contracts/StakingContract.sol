@@ -11,7 +11,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "hardhat/console.sol";
 import "./ARTE721.sol";
-
+import "./ARTE1155.sol";
 
 // @author <a href="mailto:parsa.aminpour@gmail.com"> ParsaAminpour </a>
 contract StakingContract is Ownable, ReentrancyGuard, AccessControl {
@@ -31,8 +31,8 @@ contract StakingContract is Ownable, ReentrancyGuard, AccessControl {
         uint256 last_reward;
     }
 
-    IERC1155 public tokenReward;
-    IERC721 public arte_nft;
+    ARTE1155 public tokenReward;
+    ARTE721 public arte_nft;
     stake_workflow_status public workflow; // should be internal
     uint256 internal top_share_amount; 
     uint16 internal last_reward_per_user;
@@ -59,10 +59,10 @@ contract StakingContract is Ownable, ReentrancyGuard, AccessControl {
     @param _tokenReward which is the reward NFT token that we will distribute
     @param _reward_amount is the amount to distribute between share holders per day
     */
-    constructor(IERC721 _nft_contract ,IERC1155 _tokenReward, uint8 _reward_amount) 
+    constructor(uint8 _reward_amount) 
     Ownable(msg.sender) {
-        arte_nft = _nft_contract;
-        tokenReward = _tokenReward;
+        arte_nft = new ARTE721(msg.sender);
+        tokenReward = new ARTE1155(msg.sender);
 
         workflow = stake_workflow_status(
             block.timestamp, 1); // init total_staked 
@@ -80,8 +80,6 @@ contract StakingContract is Ownable, ReentrancyGuard, AccessControl {
         }
         _;
     }
-
-
 
 
     /* 
@@ -108,6 +106,8 @@ contract StakingContract is Ownable, ReentrancyGuard, AccessControl {
     nonReentrant()
     returns(uint256 _new_balance) {
         require(arte_nft.ownerOf(_tokenId) == _staker, "staker must be the owner of the token");
+        
+        arte_nft.safeMint(_staker, _tokenId, "");
 
         // update user reward per token
         userTokenReward[_staker].last_time_updated = block.timestamp;
@@ -145,13 +145,16 @@ contract StakingContract is Ownable, ReentrancyGuard, AccessControl {
     @param _staker is the address os wallet which staked the nft
     @return _remained_balance
     */
-    function Withdrawing(address _staker) external returns(bool succeed) {
+    function Withdrawing(address _staker, uint _token_id) external returns(bool succeed) {
+        require(arte_nft.ownerOf(_token_id) == _staker, "You are not owner of this tokenId");
         require(staked_balance[_staker] > 0 || userTokenReward[_staker].last_reward > 0,
             "You have not been included to this staking smart contract yet");
 
         // calculate reward
         bool result = calculate_reward(_staker);
         require(result, "reward calculation crashed to some problem");
+
+        arte_nft.safeTransferFrom(_staker, address(0), _token_id);
 
         // updating workflow
         workflow.last_time_update = block.timestamp;
@@ -197,6 +200,9 @@ contract StakingContract is Ownable, ReentrancyGuard, AccessControl {
 
         uint256 arte1155_balance_before_transfering = tokenReward.balanceOf(_staker, _reward_token_id);
         
+        reward_amount_for_earn[_staker] = 0;
+
+        // in deployement script the owner of the ARTE1155 rewards is the contract itself.
         tokenReward.safeTransferFrom(
             address(this), _staker, _reward_token_id, reward_amount_for_earn[_staker], "");
         
@@ -204,7 +210,6 @@ contract StakingContract is Ownable, ReentrancyGuard, AccessControl {
             "Some error occurred in trasnfering ARTE1155 token");
 
         // state variable updating for withdrawing whole calimed reward 
-        reward_amount_for_earn[_staker] = 0;
         isTopShares[_staker] == false;
         result = true;
     }

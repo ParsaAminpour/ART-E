@@ -94,6 +94,8 @@ contract StakingContract is Ownable, ReentrancyGuard, AccessControl {
     @NOTE: this algorithm will be coded in Inline Assembly format ASAP.
     */
     function _update_last_time_reward() public view returns(uint256 result){
+        // console.log(const_reward);
+        // console.log(workflow.total_staked);
         uint256 first = ((const_reward * 1e18) / (workflow.total_staked));
         uint256 second = (block.timestamp - workflow.last_time_update);
         result = last_reward_per_user + (first * second);
@@ -159,19 +161,31 @@ contract StakingContract is Ownable, ReentrancyGuard, AccessControl {
         require(arte_nft.ownerOf(_token_id) == _staker, "You are not owner of this tokenId");
         require(userTokenReward[_staker].last_reward > 0, "You have not been included to this staking smart contract yet");
 
+        console.log("test");
+
         // calculate reward
         bool result = calculate_reward(_staker);
         require(result, "reward calculation crashed to some problem");
 
-        arte_nft.safeTransferFrom(_staker, address(0), _token_id);
+        console.log("test6");
+
+        // console.log(arte_nft.balanceOf(_staker));
+        // burning the token
+        arte_nft.safeTransferFrom(_staker, address(this), _token_id);
 
         // updating workflow
         workflow.last_time_update = block.timestamp;
         workflow.total_staked --;
 
+        console.log("test7");
         // change userTokenReward
         userTokenReward[_staker].last_reward  = _update_last_time_reward();
+
+        console.log("test8");
+
         userTokenReward[_staker].last_time_updated = workflow.last_time_update;
+
+        console.log("test9");
 
         // change stakedBalance
         staked_balance[_staker] --;
@@ -189,12 +203,26 @@ contract StakingContract is Ownable, ReentrancyGuard, AccessControl {
     */
     function calculate_reward(address _staker) private returns(bool succeed) {
         // updating reward_amount_for_earn
+
+        console.log("test2");
         uint256 tmp_rf = _update_last_time_reward();
+
+        // console.log(staked_balance[_staker]);
+        // console.log(tmp_rf);
+        // console.log(userTokenReward[_staker].last_reward);
+
+        console.log("test3");
         uint256 reward_calculated = staked_balance[_staker] * (
-            tmp_rf - userTokenReward[_staker].last_reward
+            userTokenReward[_staker].last_reward - tmp_rf
         );
 
-        reward_amount_for_earn[_staker] += reward_calculated;
+        // console.log('reward_valvulated');
+        // console.log(reward_calculated/1e17);
+
+        console.log("test4");
+        reward_amount_for_earn[_staker] += reward_calculated/1e17;
+        console.log("test5");
+
         succeed = true;
     }
 
@@ -233,16 +261,13 @@ contract StakingContract is Ownable, ReentrancyGuard, AccessControl {
         reward_amount = userTokenReward[_staker].last_reward;
     }
 
-
     function getBalance(address _share_holder) public view returns(uint256 share) {
         share = staked_balance[_share_holder];
     }
 
-
     function getRewardAmountForEarn(address _staker) public view returns(uint256 reward_amount) {
         reward_amount = reward_amount_for_earn[_staker];
     }
-
 
     function getIsTopShare(address _staker) public view returns(bool _is) {
         _is = isTopShares[_staker];
@@ -254,6 +279,10 @@ contract StakingContract is Ownable, ReentrancyGuard, AccessControl {
 
     function getARTE1155() public view returns(address) {
         return address(tokenReward);
+    }
+
+    function getTotalStaked() public view returns(uint256 total) {
+        total = workflow.total_staked;
     }
 }
 

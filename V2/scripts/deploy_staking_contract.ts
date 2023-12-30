@@ -18,6 +18,13 @@ let StakingContract: any;
 let arte721_contract: any;
 let arte1155_contract: any;
 
+
+const delay = (ms: number): Promise<void> => {
+    return new Promise((resolve) => {
+        setTimeout(resolve, ms);
+    })
+}
+
 const generateAccounts = async(network: string): Promise<void> => {
     accounts = await ethers.getSigners(); // for future use-cases, not necessary
     [reward_owner, staker, another_acc] = await ethers.getSigners();
@@ -57,9 +64,10 @@ const main = async(): Promise<void> => {
     log(`And the owner of ARTE1155 is: ${await arte1155_contract.owner()}`);
     log(`And the owner of StakingContract is: ${await StakingContract.owner()}`);
 
-    log(reward_owner.address);
-    log(staker.address);
-    console.log(another_acc.address);
+
+    log(`The reward owner address is : ${reward_owner.address}`);
+    log(`The staker address is : ${staker.address}`);
+    log(`The another account address is : ${another_acc.address}`);
 
     log("\n\n\n");
 
@@ -68,18 +76,40 @@ const main = async(): Promise<void> => {
         staker.address, 1, { from: reward_owner.address }
     );
     const res = await tx.wait();
-
-    // should be time sleeping at here before another stake
+    log(await arte721_contract.balanceOf(staker.address));
+    
+    // should be time sleeping at here before another staking
 
     const tx2 = await StakingContract.Staking(
-        another_acc.address, 2, { from: another_acc.address }
+        staker.address, 2, { from: reward_owner.address }
     )
     const res2 = await tx2.wait();
 
-    
-    // we should working with tasks in hardhat
+        
+    const total_satked = await StakingContract.getTotalStaked();
+    log(total_satked);
 
+    // For debugging purposes
+    const name_ = await arte721_contract.name();
+    log('the name is');
+    log(name_);
+
+    // approving before withdrawing
+    const contract_address = await StakingContract.getAddress();
     
+    await arte721_contract.connect(staker.address);
+    const approve_tx = await arte721_contract.approve(
+        contract_address, 1);
+    approve_tx.wait();
+
+
+    log("\n\n\n");
+    // There are some errors here:
+    // Withdrawing function
+    const tx3 = await StakingContract.Withdrawing(
+        staker.address, 1
+    )
+    const res3 = tx3.wait();
 }
 
 main().catch((error) => {
